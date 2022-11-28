@@ -39,5 +39,5 @@ class CovarianceEllipses:
         w = w[idx]
         V = V[:,idx]
         d1, d2 = 2*np.sqrt(w)
-        angle = np.arctan2(V[0,1], V[0,0])*180.0/np.pi
+        angle = np.arctan2(V[1,0], V[0,0])*180.0/np.pi
         return d1, d2, angle

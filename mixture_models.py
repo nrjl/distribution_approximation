@@ -2,6 +2,7 @@ import numpy as np
 from scipy.stats import wishart, multivariate_normal
 from plotting.covariance_ellipse import CovarianceEllipses
 from plotting.weighted_data import WeightedData, make_rgb_array
+import warnings
 
 class MixtureModel:
     weight = None
@@ -43,9 +44,9 @@ class MixtureModel:
         assert Z.shape[1] == self.d, "Number of dimensions must match existing observations, new = {0}, existing = {1}".format(Z.shape[1], self.d)
         self.observations = np.vstack((self.observations, Z))
          
-    def _init_mixture_params(self, dirichlet_density=2.0):
+    def _init_mixture_params(self, dirichlet_density=3.0):
         self.component_weights = np.random.dirichlet(dirichlet_density*np.ones(self.n_components))     # AKA Phi - sample from dirichlet, tend towards more even
-        while np.isnan(self.component_weights).any():
+        while np.isnan(self.component_weights).any() or (self.component_weights == 0).any():
             self.component_weights = np.random.dirichlet(dirichlet_density*np.ones(self.n_components))     # Sometimes we sample nans?
         self.components = [self.component_model() for i in range(self.n_components)]
 
@@ -68,7 +69,8 @@ class MixtureModel:
     def _expectation_step(self):
         # Expectation (weight each observation componenent by likeihood with current parameters)
         p_z = self.data_likelihood()*self.component_weights
-        self.p_z = p_z/p_z.sum(axis=1, keepdims=True)
+        sum_p_z = p_z.sum(axis=1, keepdims=True)
+        self.p_z = p_z/sum_p_z
         
     def EM_step(self):
         self._expectation_step()
@@ -137,6 +139,8 @@ class GaussianComponent(Component):
         # We will sample from Normal(0, 1) for mean and Wishart(1, n) for covariance
         mean = np.random.normal(0, 3, size=self.n_dim)
         covariance =  wishart.rvs(self.n_dim, np.identity(self.n_dim), 1)
+        while np.linalg.det(covariance) <= 0:
+            covariance =  wishart.rvs(self.n_dim, np.identity(self.n_dim), 1)
         return multivariate_normal(mean, covariance)
     
     def maximise_likelihood(self, z, p_z, mass) -> None:
@@ -144,6 +148,12 @@ class GaussianComponent(Component):
         self.distribution.mean = imass*(p_z*z).sum(axis=0)
         d = z - self.distribution.mean
         self.distribution.cov = imass*np.matmul(d.T, d*p_z)
+
+        # Check covariance is valid
+        if np.linalg.det(self.distribution.cov) <= 0:
+            warnings.warn('WARNING: Invalid covariance (det <= 0), re-initialising')
+            self._init_distribution()
+
 
     def sample(self, n: int = 1):
         return self.distribution.rvs(size=n)

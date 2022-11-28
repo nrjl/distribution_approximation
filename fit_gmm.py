@@ -8,7 +8,7 @@ parser = argparse.ArgumentParser(description='Fit and plot a GMM using Expectati
 parser.add_argument('-c', '--components', type=int, default=3, help='Number of Gaussian components')
 parser.add_argument('-d', '--dimensions', type=int, default=2, help='Number of dimensions (only 1 or 2 supported)')
 parser.add_argument('-o', '--observations', type=int, default=2000, help='Number of observations')
-parser.add_argument('-s', '--steps', type=int, default=100, help='Number of EM steps')
+parser.add_argument('-s', '--steps', type=int, default=50, help='Number of EM steps')
 parser.add_argument('-a', '--save-animation', action='store_true', help='Save animation')
 args = parser.parse_args()
 
@@ -25,7 +25,7 @@ def axlim(low, high, pad=0.1):
     high = high + pad*(high-low)
     return low, high
 
-n_steps = 100
+n_steps = args.steps
 
 def init():
     ax.cla()
