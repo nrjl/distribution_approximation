@@ -5,6 +5,7 @@ from plotting.weighted_data import WeightedData, make_rgb_array
 
 class MixtureModel:
     weight = None
+    p_z = None
 
     def __init__(self, component_model, n_components: int, problem_dimension: int=2, observations=None) -> None:
         # Mixture Model
@@ -42,8 +43,10 @@ class MixtureModel:
         assert Z.shape[1] == self.d, "Number of dimensions must match existing observations, new = {0}, existing = {1}".format(Z.shape[1], self.d)
         self.observations = np.vstack((self.observations, Z))
          
-    def _init_mixture_params(self):
-        self.component_weights = np.random.dirichlet(np.ones(self.n_components))     # AKA Phi
+    def _init_mixture_params(self, dirichlet_density=2.0):
+        self.component_weights = np.random.dirichlet(dirichlet_density*np.ones(self.n_components))     # AKA Phi - sample from dirichlet, tend towards more even
+        while np.isnan(self.component_weights).any():
+            self.component_weights = np.random.dirichlet(dirichlet_density*np.ones(self.n_components))     # Sometimes we sample nans?
         self.components = [self.component_model() for i in range(self.n_components)]
 
     def data_likelihood(self):
@@ -64,8 +67,8 @@ class MixtureModel:
 
     def _expectation_step(self):
         # Expectation (weight each observation componenent by likeihood with current parameters)
-        self.p_z = self.data_likelihood()*self.component_weights
-        self.p_z /= self.p_z.sum(axis=1, keepdims=True)
+        p_z = self.data_likelihood()*self.component_weights
+        self.p_z = p_z/p_z.sum(axis=1, keepdims=True)
         
     def EM_step(self):
         self._expectation_step()

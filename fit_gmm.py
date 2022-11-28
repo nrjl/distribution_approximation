@@ -2,13 +2,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mixture_models import MixtureModel, GaussianComponent
 import matplotlib.animation as anim
+import argparse
 
-n_components = 3
-true_gmm = MixtureModel(GaussianComponent, n_components, 2)
-fit_gmm = MixtureModel(GaussianComponent, n_components, 2)
+parser = argparse.ArgumentParser(description='Fit and plot a GMM using Expectation Maximisation')
+parser.add_argument('-c', '--components', type=int, default=3, help='Number of Gaussian components')
+parser.add_argument('-d', '--dimensions', type=int, default=2, help='Number of dimensions (only 1 or 2 supported)')
+parser.add_argument('-o', '--observations', type=int, default=2000, help='Number of observations')
+parser.add_argument('-s', '--steps', type=int, default=100, help='Number of EM steps')
+parser.add_argument('-a', '--save-animation', action='store_true', help='Save animation')
+args = parser.parse_args()
 
-n_observations = 2000
-Z = true_gmm.sample(n_observations)
+true_gmm = MixtureModel(GaussianComponent, args.components, args.dimensions)
+fit_gmm = MixtureModel(GaussianComponent, args.components, args.dimensions)
+
+Z = true_gmm.sample(args.observations)
 fit_gmm.add_observations(Z)
 
 fig, ax  = plt.subplots()
@@ -40,7 +47,8 @@ def animate(i):
     return h_fit
 
 a = anim.FuncAnimation(fig, animate, init_func=init, frames=n_steps, interval=100, blit=True)
-a.save('movies/gmm_em_fit.mp4', writer='ffmpeg', dpi=200,
-    extra_args=["-crf", "18", "-profile:v", "main", "-tune", "animation", "-pix_fmt", "yuv420p"])
+if args.save_animation:
+    a.save('movies/gmm_em_fit.mp4', writer='ffmpeg', dpi=200,
+        extra_args=["-crf", "18", "-profile:v", "main", "-tune", "animation", "-pix_fmt", "yuv420p"])
 
 plt.show()
